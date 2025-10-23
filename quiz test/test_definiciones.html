@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Examen general — Biología (Células)</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --card:#ffffff;
+    --text:#0f1724;
+    --muted:#6b7280;
+    --accent:#2b6cb0;
+    --correct:#1f9d55;
+    --wrong:#e55353;
+    --shadow: 0 8px 30px rgba(16,24,40,0.06);
+  }
+  #startNow {background:var(--accent);color:rgb(255, 255, 255);border:grey;padding:10px 12px;border-radius:8px;cursor:pointer}
+  [data-theme="dark"]{
+    --bg:#132b5b;
+    --card:#071025;
+    --text:#e6eef8;
+    --muted:#98a2b3;
+    --accent:#7aa7ff;
+    --shadow: 0 8px 30px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:linear-gradient(180deg,var(--bg) 0%, rgba(255,255,255,0.02) 100%);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .app{width:100%;max-width:900px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+  header h1{margin:0;font-size:1.2rem;color:var(--accent)}
+  header .controls{display:flex;gap:8px;align-items:center}
+  .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:var(--shadow)}
+  .intro{margin-bottom:12px;color:var(--muted)}
+  .exam-area{margin-top:12px}
+  .meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px}
+  .meta .counter{color:var(--muted)}
+  .box{background:rgba(0,0,0,0.02);padding:12px;border-radius:10px}
+  .definition{font-size:1.05rem;font-weight:600;margin-bottom:10px}
+  .answer-row{display:flex;gap:8px;align-items:center}
+  input[type="text"]{flex:1;padding:10px;border-radius:8px;border:1px solid #e6edf9;background:transparent;color:var(--text);font-size:1rem}
+  button{padding:10px 12px;border-radius:8px;border:0;cursor:pointer;background:var(--accent);color:white}
+  .btn-ghost{background:transparent;border:1px solid rgba(0,0,0,0.06);color:var(--muted)}
+  .feedback{margin-top:10px;font-weight:700;min-height:22px}
+  .feedback.correct{color:var(--correct)}
+  .feedback.wrong{color:var(--wrong)}
+  .final-score{font-size:1.1rem;font-weight:800;color:var(--accent);margin-top:12px}
+  .review{margin-top:12px}
+  .review-item{padding:10px;border-radius:8px;border:1px solid rgba(0,0,0,0.04);margin-bottom:8px;background:rgba(0,0,0,0.01)}
+  .small{font-size:0.9rem;color:var(--muted)}
+  .flex{display:flex;gap:8px;align-items:center}
+  .actions{display:flex;gap:8px;margin-top:12px}
+  .toggle{display:inline-flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,0.03);cursor:pointer}
+  @media (max-width:640px){
+    input[type="text"]{font-size:0.95rem}
+    header{flex-direction:column;align-items:flex-start;gap:8px}
+  }
+</style>
+</head>
+<body>
+  <div class="app card" id="app">
+    <header>
+      <div>
+        <h1>Examen final — Células (definición → palabra)</h1>
+        <div class="small intro">20 preguntas aleatorias. Escribe la palabra que corresponde a la definición. Respuestas sin distinguir mayúsculas, minúsculas ni tildes.</div>
+      </div>
+      <div class="controls">
+        <div class="toggle" id="themeToggle" title="Alternar modo oscuro">🌙 <span class="small">Modo</span></div>
+        <button id="startBtn">Comenzar examen</button>
+      </div>
+    </header>
+
+    <section id="startPanel" class="card" style="margin-bottom:12px">
+      <p class="small">Al hacer clic en <strong>Comenzar examen</strong> se generarán 20 preguntas aleatorias. Podrás escribir la respuesta y recibir feedback inmediato. Al final verás tu nota y un repaso de errores.</p>
+      <div class="actions">
+        <label class="small" style="align-self:center">Número de preguntas:</label>
+        <select id="numSelect" style="padding:8px;border-radius:8px;border:1px solid #e6edf9">
+          <option value="10">10</option>
+          <option value="15">15</option>
+          <option value="20" selected>20</option>
+          <option value="30">30</option>
+        </select>
+        <button id="startNow" class="btn-ghost">Comenzar ahora</button>
+      </div>
+    </section>
+
+    <section id="examPanel" class="card" style="display:none">
+      <div class="meta">
+        <div class="counter"><span id="qIndex">0</span> / <span id="qTotal">0</span></div>
+        <div class="small">Puntuación: <span id="score">0</span></div>
+      </div>
+
+      <div class="box">
+        <div class="definition" id="definitionText">—</div>
+        <div class="answer-row">
+          <input type="text" id="answerInput" placeholder="Escribe tu respuesta aquí y pulsa Enter o Comprobar">
+          <button id="checkBtn">Comprobar</button>
+          <button id="skipBtn" class="btn-ghost">Saltar</button>
+        </div>
+        <div class="feedback" id="feedback"></div>
+      </div>
+
+      <div class="actions" style="justify-content:flex-end">
+        <button id="prevQ" class="btn-ghost">Anterior</button>
+        <button id="nextQ" class="btn-ghost">Siguiente</button>
+        <button id="finishBtn" style="background:#444;color:#fff">Finalizar examen</button>
+      </div>
+
+      <div id="finalBlock" style="display:none">
+        <div class="final-score" id="finalScoreText"></div>
+        <div class="small" id="gradeText"></div>
+        <div class="review" id="reviewList"></div>
+        <div style="margin-top:12px" class="flex">
+          <button id="retryBtn">Volver a intentar</button>
+          <button id="downloadBtn" class="btn-ghost">Descargar resultados (CSV)</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+<script>
+/* ---------- Banco de definiciones + respuestas ---------- */
+/* Mezcla de Mitosis, Meiosis, Orgánulos y Teoría Endosimbiótica */
+const definitionBank = [
+  {def: "Etapa del ciclo celular en la que la cromatina comienza a condensarse.", ans: "profase"},
+  {def: "Estructura que desaparece al inicio de la profase (en el núcleo).", ans: "nucléolo"},
+  {def: "Estructura proteica que separa las cromátidas durante la anafase.", ans: "microtúbulos del huso"},
+  {def: "Plano imaginario donde se alinean los cromosomas durante la metafase.", ans: "placa metafásica"},
+  {def: "Nombre del proceso que divide el citoplasma después de la mitosis.", ans: "citocinesis"},
+  {def: "Anillo formado por filamentos de actina que divide a la célula animal en dos.", ans: "anillo contráctil"},
+  {def: "Fase de la mitosis en la que las cromátidas se separan y van a polos opuestos.", ans: "anafase"},
+  {def: "Fase de la mitosis en la que reaparece la membrana nuclear y los cromosomas se descondensan.", ans: "telofase"},
+  {def: "Nombre del proceso que produce cuatro células haploides a partir de una célula diploide.", ans: "meiosis"},
+  {def: "Fase de la meiosis en la cual tiene lugar el sobrecruzamiento (crossing-over).", ans: "profase i"},
+  {def: "Tipo de división que reduce a la mitad el número de cromosomas.", ans: "división reductora"},
+  {def: "Nombre de la célula resultante de la unión de dos gametos.", ans: "cigoto"},
+  {def: "Orgánulo encargado de la producción de energía mediante respiración celular.", ans: "mitocondria"},
+  {def: "Orgánulo vegetal que contiene tilacoides y realiza la fotosíntesis.", ans: "cloroplasto"},
+  {def: "Orgánulo sin membrana que sintetiza proteínas.", ans: "ribosoma"},
+  {def: "Conjunto líquido del interior celular donde están flotando los orgánulos.", ans: "citoplasma"},
+  {def: "Orgánulo que procesa y empaqueta proteínas en vesículas para su secreción.", ans: "aparato de golgi"},
+  {def: "Retículo endoplasmático con ribosomas que sintetiza proteínas destinadas a la secreción.", ans: "retículo endoplasmático rugoso"},
+  {def: "Retículo endoplasmático que sintetiza lípidos y detoxifica sustancias.", ans: "retículo endoplasmático liso"},
+  {def: "Estructura que protege y mantiene la forma de las células vegetales (compuesta por celulosa).", ans: "pared celular"},
+  {def: "Pequeñas estructuras que ayudan a la movilidad bacteriana (cola móvil).", ans: "flagelo"},
+  {def: "Estructura bacteriana que facilita la adhesión al sustrato (no siempre presente).", ans: "fimbrias"},
+  {def: "Estructura presente en algunas bacterias que confiere protección adicional y virulencia.", ans: "cápsula"},
+  {def: "Teoría que propone que las mitocondrias y cloroplastos proceden de bacterias integradas en células primitivas.", ans: "teoría endosimbiótica"},
+  {def: "Prueba de la teoría endosimbiótica: mitocondrias y cloroplastos contienen este tipo de ADN.", ans: "adn circular"},
+  {def: "Nombre del tipo de célula que no tiene núcleo definido.", ans: "procariota"},
+  {def: "Tipo de célula que contiene núcleo y orgánulos membranosos.", ans: "eucariota"},
+  {def: "Orgánulo que contiene enzimas digestivas y realiza la digestión intracelular.", ans: "lisosoma"},
+  {def: "Estructura que mantiene la forma celular y participa en el movimiento celular (compuesta de filamentos proteicos).", ans: "citoesqueleto"},
+  {def: "Estructura a partir de la cual se forman los cilios y flagelos y que participa en la división celular en animales.", ans: "centriolo"},
+  {def: "Proceso de muerte celular programada que elimina células con daño genético.", ans: "apoptosis"},
+  {def: "Proteína conocida como guardián del genoma que controla la apoptosis y la detención del ciclo celular.", ans: "p53"},
+  {def: "Nombre de la fase del ciclo celular en la que la célula replica su ADN.", ans: "fase s"},
+  {def: "Nombre general del conjunto de procesos que van desde el nacimiento de la célula hasta su división.", ans: "ciclo celular"},
+  {def: "Moléculas formadas por la unión de nucleótidos que almacenan y transmiten la información genética.", ans: "ácidos nucleicos"},
+  {def: "Unidad estructural de los ácidos nucleicos formada por fosfato, pentosa y base nitrogenada.", ans: "nucleótido"},
+  {def: "Tipo de enlace que une los nucleótidos entre sí en los ácidos nucleicos.", ans: "enlace fosfodiéster"},
+  {def: "Ácido nucleico de doble cadena que contiene la información genética en la mayoría de los organismos.", ans: "adn"},
+  {def: "Ácido nucleico de cadena sencilla que participa en la síntesis de proteínas.", ans: "arn"},
+  {def: "Molécula de ARN que copia la información del ADN y la lleva al ribosoma.", ans: "arn mensajero"},
+  {def: "Tipo de ARN que forma parte estructural de los ribosomas.", ans: "arn ribosómico"},
+  {def: "Tipo de ARN que transporta aminoácidos hasta el ribosoma durante la traducción.", ans: "arn de transferencia"},
+  {def: "Proceso mediante el cual el ADN se copia a sí mismo antes de la división celular.", ans: "replicación"},
+  {def: "Tipo de replicación del ADN en la que se conserva una cadena original y se sintetiza otra nueva.", ans: "replicación semiconservativa"},
+  {def: "Proceso mediante el cual la información del ADN se copia en una molécula de ARN mensajero.", ans: "transcripción"},
+  {def: "Proceso mediante el cual se sintetizan proteínas a partir de la información del ARN mensajero.", ans: "traducción"},
+  {def: "Conjunto de procesos que permiten obtener una proteína a partir de la información de un gen.", ans: "expresión génica"},
+  {def: "Relación entre las bases nitrogenadas del ARNm y los aminoácidos que codifican.", ans: "código genético"},
+  {def: "Triplete de bases nitrogenadas que codifica un aminoácido específico.", ans: "codón"},
+  {def: "Mutación debida a errores naturales en los mecanismos celulares.", ans: "mutación espontánea"},
+  {def: "Mutación provocada por la acción de agentes externos como radiación o sustancias químicas.", ans: "mutación inducida"},
+  {def: "Sustancia física, química o biológica capaz de provocar mutaciones.", ans: "mutágeno"},
+  {def: "Mutación que afecta a la secuencia de nucleótidos de un gen.", ans: "mutación génica"},
+  {def: "Mutación que altera la estructura de un cromosoma.", ans: "mutación cromosómica"},
+  {def: "Mutación que altera el número de cromosomas en una célula.", ans: "mutación genómica"},
+  {def: "Tipo de mutación en la que se gana o pierde uno o más cromosomas, como en el síndrome de Down.", ans: "aneuploidía"},
+  {def: "Tipo de mutación en la que se altera la dotación completa de cromosomas (n, 3n, 4n...).", ans: "euploidía"},
+  {def: "Mutación que afecta a las células del cuerpo y no se transmite a la descendencia.", ans: "mutación somática"},
+  {def: "Mutación que afecta a los gametos y puede transmitirse a la descendencia.", ans: "mutación germinal"},
+  {def: "Mutación sin efectos apreciables sobre el organismo.", ans: "mutación neutral"},
+  {def: "Mutación que confiere una ventaja al organismo.", ans: "mutación beneficiosa"},
+  {def: "Mutación que produce un efecto negativo en el organismo.", ans: "mutación perjudicial"},
+  {def: "Trastorno genético causado por la presencia de una tercera copia del cromosoma 21.", ans: "síndrome de down"},
+  {def: "Trastorno genético que afecta a hombres con un cromosoma X adicional (XXY).", ans: "síndrome de klinefelter"},
+  {def: "Trastorno genético que afecta a mujeres que solo tienen un cromosoma X.", ans: "síndrome de turner"},
+  {def: "Nombre del proceso por el que un virus con ARN convierte su material genético en ADN para infectar.", ans: "transcripción inversa"},
+  {def: "Moléculas proteicas capaces de replicarse a sí mismas y causar enfermedades neurodegenerativas.", ans: "priones"},
+  {def: "Estructura en doble hélice descubierta por Watson y Crick a partir de los estudios de Rosalind Franklin.", ans: "estructura del adn"},
+  {def: "Tipo de enlace que une las bases complementarias en el ADN.", ans: "enlace de hidrógeno"},
+  {def: "Bases nitrogenadas que se aparean mediante tres enlaces de hidrógeno.", ans: "citosina y guanina"},
+  {def: "Bases nitrogenadas que se aparean mediante dos enlaces de hidrógeno.", ans: "adenina y timina"},
+  {def: "Molécula que contiene la información necesaria para sintetizar una proteína específica.", ans: "gen"}
+
+];
+
+/* ---------- Utilidades ---------- */
+/* Quitar acentos, normalizar y minúsculas */
+function normalizeAnswer(s){
+  if(!s) return "";
+  // Normalizar acentos y pasar a minúsculas
+  try {
+    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  } catch(e) {
+    // formato alternativo si normalize no disponible
+    return s.replace(/[áàäãâÁÀÄÃÂ]/g,'a').replace(/[éèëêÉÈËÊ]/g,'e').replace(/[íìïîÍÌÏÎ]/g,'i').replace(/[óòöõôÓÒÖÕÔ]/g,'o').replace(/[úùüûÚÙÜÛ]/g,'u').toLowerCase().trim();
+  }
+}
+
+/* Comparar permitiendo sinónimos simples:
+   - si la respuesta correcta es compuesta (p.ej. "retículo endoplasmático rugoso")
+     aceptaremos si el usuario escribe "rer" o "reticulo rugoso" etc. Haremos comprobación básica: 
+     si todas las palabras clave del answer aparecen en la respuesta del usuario (orden libre).
+*/
+function isEquivalent(user, correct){
+  const u = normalizeAnswer(user);
+  const c = normalizeAnswer(correct);
+  if(!u) return false;
+  if(u === c) return true;
+  // split into words and check keywords
+  const cWords = c.split(/\s+/).filter(Boolean);
+  // if correct is one word, allow small fuzzy matches
+  if(cWords.length === 1){
+    // allow near exact or substring match
+    if(u.includes(cWords[0])) return true;
+  } else {
+    // require at least 60% of words present
+    let matched = 0;
+    cWords.forEach(w => { if(u.includes(w)) matched++; });
+    if(matched / cWords.length >= 0.6) return true;
+  }
+  return false;
+}
+
+/* ---------- Estado y UI ---------- */
+const startBtn = document.getElementById('startBtn');
+const startNow = document.getElementById('startNow');
+const numSelect = document.getElementById('numSelect');
+const examPanel = document.getElementById('examPanel');
+const startPanel = document.getElementById('startPanel');
+const qIndexSpan = document.getElementById('qIndex');
+const qTotalSpan = document.getElementById('qTotal');
+const definitionText = document.getElementById('definitionText');
+const answerInput = document.getElementById('answerInput');
+const checkBtn = document.getElementById('checkBtn');
+const skipBtn = document.getElementById('skipBtn');
+const prevQ = document.getElementById('prevQ');
+const nextQ = document.getElementById('nextQ');
+const scoreSpan = document.getElementById('score');
+const feedbackDiv = document.getElementById('feedback');
+const finishBtn = document.getElementById('finishBtn');
+const finalBlock = document.getElementById('finalBlock');
+const finalScoreText = document.getElementById('finalScoreText');
+const gradeText = document.getElementById('gradeText');
+const reviewList = document.getElementById('reviewList');
+const retryBtn = document.getElementById('retryBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const themeToggle = document.getElementById('themeToggle');
+
+let examQuestions = []; // {def, ans, user, correct(bool)}
+let currentIndex = 0;
+let score = 0;
+
+/* ---------- Lógica del examen ---------- */
+function pickRandomQuestions(n){
+  // shuffle and pick n
+  const pool = [...definitionBank];
+  for(let i=pool.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, Math.min(n, pool.length)).map(item => ({...item, user: null, correct: null}));
+}
+
+function startExam(){
+  const n = parseInt(numSelect.value,10) || 20;
+  examQuestions = pickRandomQuestions(n);
+  currentIndex = 0;
+  score = 0;
+  updateMeta();
+  showQuestion(0);
+  startPanel.style.display = 'none';
+  examPanel.style.display = 'block';
+  finalBlock.style.display = 'none';
+  answerInput.value = '';
+  feedbackDiv.textContent = '';
+  answerInput.focus();
+}
+
+function updateMeta(){
+  qIndexSpan.textContent = currentIndex+1;
+  qTotalSpan.textContent = examQuestions.length;
+  scoreSpan.textContent = score;
+}
+
+function showQuestion(i){
+  if(i<0) i = 0;
+  if(i>=examQuestions.length) i = examQuestions.length-1;
+  currentIndex = i;
+  const q = examQuestions[currentIndex];
+  definitionText.textContent = q.def;
+  answerInput.value = q.user || '';
+  feedbackDiv.textContent = '';
+  feedbackDiv.className = 'feedback';
+  updateMeta();
+  answerInput.focus();
+}
+
+/* Comprobar respuesta actual */
+function checkAnswer(){
+  const q = examQuestions[currentIndex];
+  const user = answerInput.value.trim();
+  if(user === ''){
+    feedbackDiv.textContent = 'Escribe una respuesta o pulsa "Saltar".';
+    feedbackDiv.className = 'feedback wrong';
+    return;
+  }
+  const ok = isEquivalent(user, q.ans);
+  q.user = user;
+  q.correct = ok;
+  if(ok){
+    feedbackDiv.textContent = '¡Correcto!';
+    feedbackDiv.className = 'feedback correct';
+    // si antes no estaba contestada correctamente, sumar
+    // pero para evitar doble conteo: recalcular puntuación
+  } else {
+    feedbackDiv.textContent = `Incorrecto — respuesta correcta: ${q.ans}`;
+    feedbackDiv.className = 'feedback wrong';
+  }
+  // recalcular puntuación
+  score = examQuestions.reduce((acc, it) => acc + (it.correct ? 1 : 0), 0);
+  updateMeta();
+}
+
+/* Saltar pregunta (la deja sin responder) */
+function skipQuestion(){
+  const q = examQuestions[currentIndex];
+  if(q.user === null){
+    q.user = '';
+    q.correct = false;
+  }
+  // mover a la siguiente automáticamente
+  if(currentIndex < examQuestions.length-1) showQuestion(currentIndex+1);
+  else showQuestion(currentIndex);
+}
+
+/* Navegación */
+prevQ.addEventListener('click', ()=> { if(currentIndex>0) showQuestion(currentIndex-1); });
+nextQ.addEventListener('click', ()=> { if(currentIndex<examQuestions.length-1) showQuestion(currentIndex+1); });
+
+checkBtn.addEventListener('click', ()=> { checkAnswer(); });
+skipBtn.addEventListener('click', ()=> { skipQuestion(); });
+
+answerInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') { e.preventDefault(); checkAnswer(); }
+});
+
+/* Finalizar examen: mostrar nota y repaso */
+function finishExam(){
+  // ensure answers counted
+  // mark unanswered as incorrect
+  examQuestions.forEach(q => { if(q.user === null){ q.user = ''; q.correct = false; } });
+  score = examQuestions.reduce((acc,it)=> acc + (it.correct ? 1 : 0), 0);
+  updateMeta();
+  // show final block
+  finalBlock.style.display = 'block';
+  finalScoreText.textContent = `Resultado: ${score} / ${examQuestions.length}`;
+  // grade out of 10
+  const nota = (score / examQuestions.length) * 10;
+  gradeText.textContent = `Nota: ${nota.toFixed(1)} / 10`;
+  // build review
+  reviewList.innerHTML = '';
+  examQuestions.forEach((q, idx) => {
+    const item = document.createElement('div');
+    item.className = 'review-item';
+    const status = q.correct ? '✔ Correcto' : '✖ Incorrecto';
+    item.innerHTML = `<strong>${idx+1}.</strong> ${q.def}<br>
+      <small class="small">Tu respuesta: <em>${q.user || '—'}</em> • Correcta: <em>${q.ans}</em></small>
+      <div style="margin-top:6px;color:${q.correct ? 'var(--correct)' : 'var(--wrong)'};font-weight:700">${status}</div>`;
+    reviewList.appendChild(item);
+  });
+  // scroll to final block
+  finalBlock.scrollIntoView({behavior:'smooth'});
+}
+
+/* Reset / reintentar */
+function retryExam(){
+  startPanel.style.display = 'block';
+  examPanel.style.display = 'none';
+  finalBlock.style.display = 'none';
+  examQuestions = [];
+  currentIndex = 0;
+  score = 0;
+  qIndexSpan.textContent = '0';
+  qTotalSpan.textContent = '0';
+}
+
+/* Descargar CSV */
+function downloadResults(){
+  const rows = [];
+  rows.push(['#','Definición','Tu respuesta','Correcta','Estado']);
+  examQuestions.forEach((q, idx) => {
+    rows.push([idx+1, q.def, q.user || '', q.ans, q.correct ? 'Correcto' : 'Incorrecto']);
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'examen_resultados.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* Tema (modo oscuro) toggle */
+(function(){
+  const html = document.documentElement;
+  const saved = localStorage.getItem('biologia-theme');
+  if(saved === 'dark') html.setAttribute('data-theme','dark');
+  themeToggle.addEventListener('click', ()=>{
+    if(html.getAttribute('data-theme') === 'dark'){ html.removeAttribute('data-theme'); localStorage.setItem('biologia-theme','light'); }
+    else { html.setAttribute('data-theme','dark'); localStorage.setItem('biologia-theme','dark'); }
+  });
+})();
+
+/* Eventos botones */
+startNow.addEventListener('click', startExam);
+startBtn.addEventListener('click', () => { window.scrollTo({top:0,behavior:'smooth'}); startPanel.scrollIntoView({behavior:'smooth'}); });
+finishBtn.addEventListener('click', finishExam);
+retryBtn.addEventListener('click', retryExam);
+downloadBtn.addEventListener('click', downloadResults);
+
+/* Prev/Next navigation with keyboard */
+document.addEventListener('keydown', (e)=>{
+  if(examPanel.style.display === 'none') return;
+  if(e.key === 'ArrowLeft') prevQ.click();
+  if(e.key === 'ArrowRight') nextQ.click();
+});
+
+/* Inicial: mostrar contadores en 0 */
+qIndexSpan.textContent = '0';
+qTotalSpan.textContent = '0';
+scoreSpan.textContent = '0';
+
+</script>
+</body>
+</html>
